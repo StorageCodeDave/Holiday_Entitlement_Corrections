@@ -238,7 +238,7 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
 	,dbo.fnDecode (EMP.WebPassword) as WebPass
 	,EH.entref
 	,ED.enttype
-into #EntitlementsTemp
+	into #EntitlementsTemp
 -- compare All Holiday Groups with different start dates & Full join to highlight if any Empref in Entitlements table that no longer exist.
 from entitlements EH
 --Full join absences A on A.empref = EH.empref
@@ -267,7 +267,6 @@ Outer Apply (select Empref as EMP2,
 				Full join abscodes Ab3 on Ab3.coderef = A1.coderef
 				where Absdate between EH.entstartdate and EH.entenddate and A1.empref = EH.empref and Ab3.groupref = 1
 				group by A1.empref) as AbsBookedTotal 
-
 Outer Apply ( 
 				select 
 				CL.empref, 
@@ -291,8 +290,6 @@ This prevents clock used 4 times and generating 4 bank holidays but leave hours 
 							as decimal(10,1)) 
 				ELSE 0 END
 					 as [N.W.Day get only worked hrs]
-
-
 				from clockingtimes CL
 				join globabs GA on GA.absdate = CL.clockdate
 				join entitlements E on E.empref = CL.empref and groupref = 1
