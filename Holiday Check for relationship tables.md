@@ -7,7 +7,9 @@ P1
 
 
 It has 2 error columns and if corrected 1 issue and there is still more it would change to the next error using a case statement. Here you can see the values stored in the table and my error messages. Note my error messages also include the correct value calculated off picture which are ready to transfer. Attention to detail can be seen when looking at this. There is data stored in it for 2023 for Brian and this is 2025 data. Benny has 20 days, booked 9 and remaining is 16 which is wrong. Cillian start date is 15th Jan so any holiday/Bank Holidays will not be counted, and last example is Edurado has 2 holiday for 26/07/24 found in Absences table and will count as 2 holidays
+
 P2
+
 ![image](https://github.com/user-attachments/assets/e6c299b1-b8a5-405c-a317-c7fe2a4e3aaa)
  
 
@@ -64,7 +66,6 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
 Visuals to highlight if different
 */
 	Case 
-		when EH.empref = Unpaid.empref then Unpaid.[Shift Name] +' shift pays Unpaid for Holiday'
 		when DupGroup.Entref2 >0 then cast(DupGroup.Entref2 as Varchar (6))+ ' Entref Groupref = Holgroupref of Holiday'
 		When EMP.payrollno IS NULL then 'Deleted User'
 		when Eh.enttype <> ED.enttype then 'Type is wrong'
@@ -335,15 +336,7 @@ This prevents clock used 4 times and generating 4 bank holidays but leave hours 
 										where absdate between e.entstartdate and e.entenddate and b.empref = eh.empref
 								group by absdate,abstype,E.empref,B.empref,b.absdate
 								having (count (B.empref)> 1)) DupCheck
-				outer apply (  select top 1
-									 EMP.empref,
-									 S.name as [Shift Name]
-									from shiftabs sh
-									full join Shifts S on SH.shiftref = S.shiftref
-									left join Ratesnames R on R.rateno = sh.ratesref
-									left join scheduleshift SC on SC.shiftref = sh.shiftref
-									left join empdetails EMP on EMP.scheduleref = SC.scheduleref
-									where sh.ratesref = 0 and EMP.empref = EH.empref) Unpaid 
+				
 
 -- End of Outer Apply
 
@@ -354,7 +347,7 @@ EH.groupref = 1
 --and (BankHolsWorked.[N.W.Day get only worked hrs]>0 or BankHolsWorked.CountDate>0)
 group by EH.empref,EMP.forenames,EMP.surname,EH.HolGroupRef,EH.calabstaken,Eh.broughtfwd,EH.entamount,EH.balance,p.startdate,AG.groupname,EH.LSAEntAmount,EH.absbooked,ED.entamount,ED.ContractedHoliday,ed.enttype,EH.entstartdate,EH.entenddate,EMP.Payrollno
 ,EH.sysyear,EH.enttype,P.endDate,EH.additionalent,Takensum.TakenDays,BankHolsWorked.[N.W.Day get only worked hrs],BankHolsWorked.CountDate,AbsBookedTotal.AbsTotal,EH.entref,Eh.defaultent,EMP.HolEntGroupRef,ED.entstartdate,EMP.WebLogin,EMP.WebPassword,EH.abstaken
-,DupCheck.empref,Ternimated.empref,Ternimated.endDate,DupCheck.absdate,EH.groupref,DupGroup.Entref2,Unpaid.empref,Unpaid.[Shift Name]
+,DupCheck.empref,Ternimated.empref,Ternimated.endDate,DupCheck.absdate,EH.groupref,DupGroup.Entref2
 
 
 
@@ -385,3 +378,5 @@ order by forenames
 --join #EntitlementsTemp ET on ET.entref = E.entref
 --join entitlementdefault ED on ED.groupref = Case when E.HolGroupRef = -1 then 1 else E.HolGroupRef end
 --where ET.entref = E.entref and E.groupref = 1 --and E.defaultent = 1
+
+
