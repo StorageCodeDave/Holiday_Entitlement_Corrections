@@ -62,7 +62,7 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
 	eh.calabstaken as DBTaken,
 	Case when EH.enttype = 1 then 'Hour =' else 'Days =' End as [Type1],
 	EH.balance as DBBalance,
-/*use these to view why they are flagging but look the same. Slight rounding of 0.5 can happen and trigger Visuals to highlight if different*/
+	--/*use these to view why they are flagging but look the same. Slight rounding of 0.5 can happen and trigger Visuals to highlight if different*/
 	Case 
 		when DupGroup.Entref2 >0 then cast(DupGroup.Entref2 as Varchar (6))+ ' Entref Groupref = Holgroupref of Holiday'
 		When EMP.payrollno IS NULL then 'Deleted User'
@@ -74,7 +74,7 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
 		when ED.ContractedHoliday > 0 and ED.entamount > 0 then 'Statutory '+Cast(EH.entamount as Varchar(10))+' & Contractual '+Cast(ED.ContractedHoliday as Varchar(10))
 		when coalesce(EH.abstaken ,0) >0 then 'Abstaken also has = ' + cast (EH.abstaken as char(10))
 		--when Coalesce(p.startdate,EH.entstartdate) >=EH.entstartdate then 'ProRota StartDate = '+CONVERT(VARCHAR(8), Coalesce(p.startdate,EH.entstartdate), 3)
-		when Coalesce(p.startdate,EH.entstartdate) >EH.entstartdate then 'ProRota = '+cast(CEILING(DATEDIFF(DAY, Coalesce(p.startdate,EH.entstartdate), EH.entenddate) * (coalesce(ED.entamount,0) + coalesce(ED.ContractedHoliday,0)) / 365)as Varchar(10))+
+		when Coalesce(p.startdate,EH.entstartdate) >EH.entstartdate then 'ProRota = '+cast(CEILING(DATEDIFF(DAY, Coalesce(p.startdate,EH.entstartdate), EH.entenddate) * (coalesce(ED.entamount,0) + 				coalesce(ED.ContractedHoliday,0)) / 365)as Varchar(10))+
 		' Date = '+CONVERT(VARCHAR(8), Coalesce(p.startdate,EH.entstartdate), 3)
 		when EH.entstartdate <> ED.entstartdate then 'Start date '+CONVERT(VARCHAR(8), EH.entstartdate, 3)+' Default '+CONVERT(VARCHAR(8), ED.entstartdate, 3)
 		when coalesce(EH.absbooked,0)<>coalesce(AbsBookedTotal.AbsTotal,0) then 'DB Booked ='+cast (coalesce(EH.absbooked,0) as char(10))+' '+'Calc ='+cast (coalesce(AbsBookedTotal.AbsTotal,0) as char(10))
@@ -234,7 +234,6 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
 			--			+ coalesce(BankHolsWorked.[N.W.Day get only worked hrs],BankHolsWorked.CountDate,0) + [dbo].[fnEmployeeLSA](EH.empref,EH.sysyear,case when EH.HolGroupRef = -1 then 1 else EH.HolGroupRef end)
 			--			-coalesce(AbsBookedTotal.AbsTotal,0) 
 			--		END,2) as  [Balance Hrs or Days]
-
 	,EMP.WebLogin
 	,dbo.fnDecode (EMP.WebPassword) as WebPass
 	,EH.entref
