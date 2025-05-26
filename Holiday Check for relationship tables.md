@@ -62,9 +62,7 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
 	eh.calabstaken as DBTaken,
 	Case when EH.enttype = 1 then 'Hour =' else 'Days =' End as [Type1],
 	EH.balance as DBBalance,
-/*use these to view why they are flagging but look the same. Slight rounding of 0.5 can happen and trigger
-Visuals to highlight if different
-*/
+/*use these to view why they are flagging but look the same. Slight rounding of 0.5 can happen and trigger Visuals to highlight if different*/
 	Case 
 		when DupGroup.Entref2 >0 then cast(DupGroup.Entref2 as Varchar (6))+ ' Entref Groupref = Holgroupref of Holiday'
 		When EMP.payrollno IS NULL then 'Deleted User'
@@ -86,11 +84,9 @@ Visuals to highlight if different
 		when p.startdate IS NULL then 'Personnel Start date is Null'
 		when coalesce(Eh.entamount,0) = coalesce(ED.entamount,0) + coalesce(ED.ContractedHoliday,0) and Eh.defaultent = 0 then 'Default given but unticked'
 		When Eh.defaultent = 0 and (p.startdate >=EH.entstartdate) then 'No Pro Rota used, default unticked'
-		
 		when Emp.HolEntGroupRef = 0 and (P.enddate = '1899-12-30 00:00:00.000' or P.enddate IS NULL or P.enddate>getdate()) then 'Empdetails holiday = 0 and Active'
 	else '' END--'DB Booked ='+cast (coalesce(EH.absbooked,0) as char(10))+' '+'Calc ='+cast (coalesce(AbsBookedTotal.AbsTotal,0) as char(10)) end 
 	as [Warnings],
-
 	Case
 		when EH.empref in (DupCheck.empref) then 'Duplicate Holidays on ' +CONVERT(VARCHAR(8), DupCheck.absdate, 3)
 		when EH.entamount IS NULL and ED.entamount >0 then 'Ent amount is NULL'
@@ -136,16 +132,12 @@ Visuals to highlight if different
 					,2)
 			as varchar(10))
 	END	as [Errors],
-
-
 	case when ED.ContractedHoliday>0 then 'Contractual' Else 'Statutory' End as [Check],  -- Now calculated totals
 	case when EH.defaultent = 0 then EH.entamount else coalesce(ED.entamount,0)END +coalesce(ED.ContractedHoliday,0) as CalcAmount,
 	Eh.broughtfwd as [DB Brt fwd2],
 	[dbo].[fnEmployeeLSA](EH.empref,EH.sysyear,case when EH.HolGroupRef = -1 then 1 else EH.HolGroupRef end) as LSA,
 	coalesce(BankHolsWorked.CountDate,0) as [Calc Worked BH],
 	coalesce(BankHolsWorked.[N.W.Day get only worked hrs],BankHolsWorked.CountDate,0) as [Calc BH Hrs/Days],
-	
-	
 	case 
 		when coalesce(NullIF(P.enddate,'1899-12-30 00:00:00.000'),EH.entstartdate) < EH.entstartdate then 0
 		when Coalesce(p.startdate,EH.entstartdate) >EH.entstartdate and dbo.fnIsLeaver (EH.empref) = 1-- Start late Finished Early
@@ -160,13 +152,10 @@ Visuals to highlight if different
 					else coalesce(ED.entamount,0)
 						END +coalesce(ED.ContractedHoliday,0) 
 	end as [CalcProRota],
-	
-	
 	--case when Coalesce(p.startdate,EH.entstartdate) <=EH.entstartdate then case when EH.defaultent = 0 then EH.entamount else coalesce(ED.entamount,0)END +coalesce(ED.ContractedHoliday,0) else -- give full amount if joined full year
 	--	round(Round((   DATEDIFF(DAY, Coalesce(p.startdate,EH.entstartdate), EH.entenddate) * (case when EH.defaultent = 0 then EH.entamount else coalesce(ED.entamount,0)END +coalesce(ED.ContractedHoliday,0)-(select count(globalref) from globabs where absdate < Getdate())) / 365)/5, 1)*5 ,1) end as [CalcProRota2],
 	--case when Coalesce(p.startdate,EH.entstartdate) <=EH.entstartdate then case when EH.defaultent = 0 then EH.entamount else coalesce(ED.entamount,0)END +coalesce(ED.ContractedHoliday,0)+coalesce(EH.broughtfwd,0) else -- give full amount if joined full year
 	--	CEILING(    DATEDIFF(DAY, Coalesce(p.startdate,EH.entstartdate), EH.entEnddate) * (case when EH.defaultent = 0 then EH.entamount else coalesce(ED.entamount,0)END +coalesce(ED.ContractedHoliday,0)) / 365+coalesce(EH.broughtfwd,0)) end as [CalcProRota+BF],
-
 	case 
 		when coalesce(NullIF(P.enddate,'1899-12-30 00:00:00.000'),EH.entstartdate) < EH.entstartdate then 0
 		when Coalesce(p.startdate,EH.entstartdate) >EH.entstartdate and dbo.fnIsLeaver (EH.empref) = 1-- Start late Finished Early
@@ -181,7 +170,6 @@ Visuals to highlight if different
 					else coalesce(ED.entamount,0)
 						END +coalesce(ED.ContractedHoliday,0) 
 		end +coalesce(EH.broughtfwd,0) as [CalcProRota+BF],
-
 	case
 		when coalesce(NullIF(P.enddate,'1899-12-30 00:00:00.000'),EH.entstartdate) < EH.entstartdate then 0
 		when Coalesce(p.startdate,EH.entstartdate) >EH.entstartdate and dbo.fnIsLeaver (EH.empref) = 1-- Start late Finished Early
@@ -215,7 +203,6 @@ Visuals to highlight if different
 	coalesce(AbsBookedTotal.AbsTotal,0) as AbsTotal,
 	coalesce(Takensum.TakenDays,0) as [Calc Taken],
 	Case when ED.enttype = 1 then 'Hour =' else 'Days =' End as [Type3],
-
 			round
 				(	case 
 		when coalesce(NullIF(P.enddate,'1899-12-30 00:00:00.000'),EH.entstartdate) < EH.entstartdate then 0
@@ -233,7 +220,6 @@ Visuals to highlight if different
 	end +coalesce(EH.broughtfwd,0)+[dbo].[fnEmployeeLSA](EH.empref,EH.sysyear,case when EH.HolGroupRef = -1 then 1 else EH.HolGroupRef end)+ coalesce(BankHolsWorked.[N.W.Day get only worked hrs],BankHolsWorked.CountDate,0)
 						-coalesce(AbsBookedTotal.AbsTotal,0) 
 					,2) as  [Balance Hrs or Days]
-
 			--round
 			--	(case 
 			--		when EH.defaultent = 0 
@@ -253,7 +239,6 @@ Visuals to highlight if different
 	,dbo.fnDecode (EMP.WebPassword) as WebPass
 	,EH.entref
 	,ED.enttype
-
 into #EntitlementsTemp
 -- compare All Holiday Groups with different start dates & Full join to highlight if any Empref in Entitlements table that no longer exist.
 from entitlements EH
@@ -263,7 +248,6 @@ Full join personnel P on P.empref = EH.empref
 Full join absgroups AG on AG.groupref = Eh.HolGroupRef
 --Full join abscodes Ab on Ab.coderef = A.coderef
 full join entitlementdefault ED on ED.groupref = EMP.HolEntGroupRef--coalesce(NullIF(EH.HolGroupRef,-1),1)
-
 Outer Apply (select Empref as EMP2,
 					Case when ED.enttype = 1 then 
 						round(CAST(SUM(dbo.fnGetAbsHours(A1.absref)/3600.0) AS float),2)
@@ -274,7 +258,6 @@ Outer Apply (select Empref as EMP2,
 				Full join abscodes Ab3 on Ab3.coderef = A1.coderef
 				where Absdate between EH.entstartdate and Getdate() and A1.empref = EH.empref and Ab3.groupref = 1
 				group by A1.empref) as TakenSum 
-
 Outer Apply (select Empref as EMP2,
 					Case when ED.enttype = 1 then 
 						round(CAST(SUM(dbo.fnGetAbsHours(A1.absref)/3600.0) AS float),2)
@@ -336,19 +319,15 @@ This prevents clock used 4 times and generating 4 bank holidays but leave hours 
 										where absdate between e.entstartdate and e.entenddate and b.empref = eh.empref
 								group by absdate,abstype,E.empref,B.empref,b.absdate
 								having (count (B.empref)> 1)) DupCheck
-				
-
 -- End of Outer Apply
-
 where 
 EH.groupref = 1
-																		-- also captures if has more than 1 Holiday Group
+-- also captures if has more than 1 Holiday Group
 --and (P.enddate = '1899-12-30 00:00:00.000' or P.enddate IS NULL or P.enddate>getdate())	-- Excludes leaves
 --and (BankHolsWorked.[N.W.Day get only worked hrs]>0 or BankHolsWorked.CountDate>0)
 group by EH.empref,EMP.forenames,EMP.surname,EH.HolGroupRef,EH.calabstaken,Eh.broughtfwd,EH.entamount,EH.balance,p.startdate,AG.groupname,EH.LSAEntAmount,EH.absbooked,ED.entamount,ED.ContractedHoliday,ed.enttype,EH.entstartdate,EH.entenddate,EMP.Payrollno
 ,EH.sysyear,EH.enttype,P.endDate,EH.additionalent,Takensum.TakenDays,BankHolsWorked.[N.W.Day get only worked hrs],BankHolsWorked.CountDate,AbsBookedTotal.AbsTotal,EH.entref,Eh.defaultent,EMP.HolEntGroupRef,ED.entstartdate,EMP.WebLogin,EMP.WebPassword,EH.abstaken
 ,DupCheck.empref,Ternimated.empref,Ternimated.endDate,DupCheck.absdate,EH.groupref,DupGroup.Entref2
-
 
 
 select * from #EntitlementsTemp 
