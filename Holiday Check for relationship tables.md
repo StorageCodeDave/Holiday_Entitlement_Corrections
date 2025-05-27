@@ -34,12 +34,18 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
  
 	case when Coalesce(p.startdate,EH.entstartdate) <=EH.entstartdate and coalesce(NULLIF(P.enddate,'1899-12-30 00:00:00.000'),EH.entenddate) >=EH.entenddate then 'Full Year' else
 	CONVERT(VARCHAR(8), p.startdate, 3) END AS [Start Date],
+ 
  -- Add <> around the end date to highlight they have left. Note they captured in the Error case statement above too
+ 
 	Case when coalesce(NULLIF(P.enddate,'1899-12-30 00:00:00.000'),'1899-12-30 00:00:00.000') = '1899-12-30 00:00:00.000' then CONVERT(VARCHAR(8),EH.entenddate,3) else '<'+CONVERT(VARCHAR(8),P.enddate,3)+'>' End As [Holiday End],
+ 
  -- Eh.defaultent = 0 mean the User does not want to use the usual amount assign to the holiday and use a manual amount they added just for this 1 person
+ 
 	case when Eh.defaultent = 1 then 'Realtime' else 'User' end as [Control By],
 	Case when EH.HolGroupRef = -1 then 'Default' else AG.groupname+'  --Group '+cast(EH.HolGroupRef as Char(4)) end as		[Holiday Name],
+ 
  -- customer can add Conntractual or Statutory amount so I have both displayed in the same cell and not added together so I know where the total is. Also companies should not be using both to a good highlighter.
+ 
 	cast(EH.entamount as Varchar(10)) + case when coalesce(ED.ContractedHoliday,0) = 0 then '' else '  Con =' + cast(coalesce(ED.ContractedHoliday,'') as varchar(10)) END as EntAmounts,
 	Eh.broughtfwd as [DB Brt fwd1],
 	EH.LSAEntAmount as [DB LSA],
@@ -50,7 +56,9 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
 	eh.calabstaken as DBTaken,
 	Case when EH.enttype = 1 then 'Hour =' else 'Days =' End as [Type1],
 	EH.balance as DBBalance,
+ 
 --/*use these to view why they are flagging but look the same. This will allow highlight to anyone using it it where the difference are and can discuss if need to be updated
+
 	Case 
 		when DupGroup.Entref2 >0 then cast(DupGroup.Entref2 as Varchar (6))+ ' Entref Groupref = Holgroupref of Holiday'
 		When EMP.payrollno IS NULL then 'Deleted User'
