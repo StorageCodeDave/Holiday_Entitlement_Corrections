@@ -130,9 +130,10 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
 	END	as [Errors],
 	case when ED.ContractedHoliday>0 then 'Contractual' Else 'Statutory' End as [Check],  
  
- -- Now calculate our own amounts and have them in the temp table should it be decided they need to be updated in the same order as the database so can be compared. Here where I must us a calculation everytime rather than --using a function as can not alter the database permanantly
+/*Now calculate our own amounts and have them in the temp table should it be decided they need to be updated in the same order as the database so can be compared. Here where I must us a calculation everytime rather than --using a function as can not alter the database permanantly*/
 
- case when EH.defaultent = 0 then EH.entamount else coalesce(ED.entamount,0)END +coalesce(ED.ContractedHoliday,0) as CalcAmount,
+
+ 	case when EH.defaultent = 0 then EH.entamount else coalesce(ED.entamount,0)END +coalesce(ED.ContractedHoliday,0) as CalcAmount,
 	Eh.broughtfwd as [DB Brt fwd2],
 	[dbo].[fnEmployeeLSA](EH.empref,EH.sysyear,case when EH.HolGroupRef = -1 then 1 else EH.HolGroupRef end) as LSA,
 	coalesce(BankHolsWorked.CountDate,0) as [Calc Worked BH],
@@ -239,16 +240,18 @@ declare @additionalBKHent int = (select AdditionalBKHEnt from system),@countDate
 	,ED.enttype
 	into #EntitlementsTemp
 -- compare All Holiday Groups with different start dates & Full join to highlight if any Empref in Entitlements table that no longer exist.
-from entitlements EH
---Full join absences A on A.empref = EH.empref
-Full join empdetails EMP on EMP.empref = EH.empref
-Full join personnel P on P.empref = EH.empref
-Full join absgroups AG on AG.groupref = Eh.HolGroupRef
---Full join abscodes Ab on Ab.coderef = A.coderef
-full join entitlementdefault ED on ED.groupref = EMP.HolEntGroupRef--coalesce(NullIF(EH.HolGroupRef,-1),1)
+
+	from entitlements EH
+	--Full join absences A on A.empref = EH.empref
+	Full join empdetails EMP on EMP.empref = EH.empref
+	Full join personnel P on P.empref = EH.empref
+	Full join absgroups AG on AG.groupref = Eh.HolGroupRef
+	--Full join abscodes Ab on Ab.coderef = A.coderef
+	full join entitlementdefault ED on ED.groupref = EMP.HolEntGroupRef--coalesce(NullIF(EH.HolGroupRef,-1),1)
 --Now the outer applies that may return no data. If I was to include these in the above query then some staff do not join and not shown in the report
 --this one is working out amount of holiday to Today
-Outer Apply (select Empref as EMP2,
+
+	Outer Apply (select Empref as EMP2,
 					Case when ED.enttype = 1 then 
 						round(CAST(SUM(dbo.fnGetAbsHours(A1.absref)/3600.0) AS float),2)
 					else -- give full amount if joined full year
@@ -259,7 +262,8 @@ Outer Apply (select Empref as EMP2,
 				where Absdate between EH.entstartdate and Getdate() and A1.empref = EH.empref and Ab3.groupref = 1
 				group by A1.empref) as TakenSum 
 ----this one is working out amount of holiday for the full year
-Outer Apply (select Empref as EMP2,
+
+	Outer Apply (select Empref as EMP2,
 					Case when ED.enttype = 1 then 
 						round(CAST(SUM(dbo.fnGetAbsHours(A1.absref)/3600.0) AS float),2)
 					else -- give full amount if joined full year
@@ -276,7 +280,8 @@ There is an issue if staff have access control and in and out of doors and we tr
 N.W.Day get only worked hrs will return NULL if not met and then we use CountDate to give distinct amount of days
 This prevents clock used 4 times and generating 4 bank holidays but leave hours as 1. 
 */ 
-Outer Apply ( 
+
+	Outer Apply ( 
 				select 
 				CL.empref, 
 				--CL.clockdate,
@@ -302,13 +307,16 @@ Outer Apply (
 				where GA.absdate = CL.clockdate and e.empref = EH.empref
 				group by CL.empref,E.AdditionalEnt,E.enttype) as BankHolsWorked
 --used for error messages and check they that no script has save groupref to holgroupref as found some script where auto spell has added to wrong column
-outer apply (select E4.entref as Entref2 from entitlements E4 where groupref = eh.holgroupref and E4.empref = EH.empref)  as DupGroup
+
+	outer apply (select E4.entref as Entref2 from entitlements E4 where groupref = eh.holgroupref and E4.empref = EH.empref)  as DupGroup
 -- Checks if exist in the table that stores if they have left and returned back to work and there will be a Pro rota as not worked a full year
-outer apply (select top 1 EHD.Empref,EHD.endDate from EmpHisDates EHD
+
+	outer apply (select top 1 EHD.Empref,EHD.endDate from EmpHisDates EHD
 		where EHD.Empref = EH.empref 
 		and EHD.endDate between EH.entstartdate and EH.entenddate) as Ternimated	
 -- this checks if have 2 holidays on the same day for the error messages
-outer apply(select top 1
+
+	outer apply(select top 1
 			b.empref,
 			b.absdate
 			--count (B.empref)
@@ -319,45 +327,50 @@ outer apply(select top 1
 					group by absdate,abstype,E.empref,B.empref,b.absdate
 					having (count (B.empref)> 1)) DupCheck
 -- End of all Outer Apply
-where 
-EH.groupref = 1
--- also captures if has more than 1 Holiday Group
---and (P.enddate = '1899-12-30 00:00:00.000' or P.enddate IS NULL or P.enddate>getdate())	-- Excludes leaves
---and (BankHolsWorked.[N.W.Day get only worked hrs]>0 or BankHolsWorked.CountDate>0)
-group by EH.empref,EMP.forenames,EMP.surname,EH.HolGroupRef,EH.calabstaken,Eh.broughtfwd,EH.entamount,EH.balance,p.startdate,AG.groupname,EH.LSAEntAmount,EH.absbooked,ED.entamount,ED.ContractedHoliday,ed.enttype,EH.entstartdate,EH.entenddate,EMP.Payrollno
-,EH.sysyear,EH.enttype,P.endDate,EH.additionalent,Takensum.TakenDays,BankHolsWorked.[N.W.Day get only worked hrs],BankHolsWorked.CountDate,AbsBookedTotal.AbsTotal,EH.entref,Eh.defaultent,EMP.HolEntGroupRef,ED.entstartdate,EMP.WebLogin,EMP.WebPassword,EH.abstaken
-,DupCheck.empref,Ternimated.empref,Ternimated.endDate,DupCheck.absdate,EH.groupref,DupGroup.Entref2
+
+	where 
+	EH.groupref = 1
+	-- also captures if has more than 1 Holiday Group
+	--and (P.enddate = '1899-12-30 00:00:00.000' or P.enddate IS NULL or P.enddate>getdate())	-- Excludes leaves
+	--and (BankHolsWorked.[N.W.Day get only worked hrs]>0 or BankHolsWorked.CountDate>0)
+	group by EH.empref,EMP.forenames,EMP.surname,EH.HolGroupRef,EH.calabstaken,Eh.broughtfwd,EH.entamount,EH.balance,p.startdate,AG.groupname,EH.LSAEntAmount,
+ 	EH.absbooked,ED.entamount,ED.ContractedHoliday,ed.enttype,EH.entstartdate,EH.entenddate,EMP.Payrollno
+	,EH.sysyear,EH.enttype,P.endDate,EH.additionalent,Takensum.TakenDays,
+ 	BankHolsWorked.[N.W.Day get only worked hrs],BankHolsWorked.CountDate,AbsBookedTotal.AbsTotal,EH.entref,
+  	Eh.defaultent,EMP.HolEntGroupRef,ED.entstartdate,EMP.WebLogin,EMP.WebPassword,EH.abstaken
+ 	,DupCheck.empref,Ternimated.empref,Ternimated.endDate,DupCheck.absdate,EH.groupref,DupGroup.Entref2
 
 --Now we want to see the data in the temp table
-select * from #EntitlementsTemp 
---where Warnings like 'Start%'
---where DBBalance <0
---where Errors like 'Duplicate Holidays'
-order by forenames
+
+	select * from #EntitlementsTemp 
+	--where Warnings like 'Start%'
+	--where DBBalance <0
+	--where Errors like 'Duplicate Holidays'
+	order by forenames
 
 ----If we are about to make any changes then save a copy of the table
 
---DECLARE @SQL nvarchar(2000)
---SET @SQL='select *
---INTO dbo.Entitlements_'+REPLACE(CONVERT(nvarchar(50),GETDATE(),101),'/','')+'
---from dbo.Entitlements'
---EXEC(@SQL)
---GO
+	--DECLARE @SQL nvarchar(2000)
+	--SET @SQL='select *
+	--INTO dbo.Entitlements_'+REPLACE(CONVERT(nvarchar(50),GETDATE(),101),'/','')+'
+	--from dbo.Entitlements'
+	--EXEC(@SQL)
+	--GO
 
 --This stay unused till a discussion has been made about the data found in this report and can be actioned
 
---Update E
---set 
---entamount = case when ED.ContractedHoliday > 0 and coalesce(E.entamount,0) = 0 then 0 else calcamount end,
---absbooked = [AbsTotal],
---balance = [Balance Hrs or Days],
---LSAEntAmount=LSA,
---calabstaken =[Calc Taken],
---AdditionalEnt = ET.[Calc BH Hrs/Days],
---enttype = ET.enttype
---from entitlements E
---join #EntitlementsTemp ET on ET.entref = E.entref
---join entitlementdefault ED on ED.groupref = Case when E.HolGroupRef = -1 then 1 else E.HolGroupRef end
---where ET.entref = E.entref and E.groupref = 1 --and E.defaultent = 1
+	--Update E
+	--set 
+	--entamount = case when ED.ContractedHoliday > 0 and coalesce(E.entamount,0) = 0 then 0 else calcamount end,
+	--absbooked = [AbsTotal],
+	--balance = [Balance Hrs or Days],
+	--LSAEntAmount=LSA,
+	--calabstaken =[Calc Taken],
+	--AdditionalEnt = ET.[Calc BH Hrs/Days],
+	--enttype = ET.enttype
+	--from entitlements E
+	--join #EntitlementsTemp ET on ET.entref = E.entref
+	--join entitlementdefault ED on ED.groupref = Case when E.HolGroupRef = -1 then 1 else E.HolGroupRef end
+	--where ET.entref = E.entref and E.groupref = 1 --and E.defaultent = 1
 
 
